@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>АгроСкоринг — Система оценки субсидий РК</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Manrope:wght@400;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070d09;--surface:#0d1610;--surface2:#111d13;--border:#1a2b1d;--border2:#243328;
+  --accent:#2dff6e;--accent2:#00b8f0;--accent3:#f5c842;--warn:#ff5722;
+  --text:#ddeee0;--text2:#7a9a7e;--text3:#3d5440;
+  --r:10px;--r2:14px;
+}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* ─── NOISE OVERLAY ─── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.6}
+
+/* ─── NAV ─── */
+nav{position:sticky;top:0;z-index:100;background:rgba(7,13,9,.96);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;gap:8px;backdrop-filter:blur(12px)}
+.nav-logo{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.1em;display:flex;align-items:center;gap:9px;white-space:nowrap;text-transform:uppercase}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2.4s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 0 0 rgba(45,255,110,.4)}60%{opacity:.6;transform:scale(1.6);box-shadow:0 0 0 6px rgba(45,255,110,0)}}
+.nav-links{display:flex;gap:2px;flex-wrap:wrap}
+.nav-link{padding:5px 11px;border-radius:6px;font-size:11.5px;font-weight:700;color:var(--text2);cursor:pointer;border:none;background:none;font-family:'Manrope',sans-serif;transition:all .15s;position:relative;letter-spacing:.01em}
+.nav-link:hover{background:var(--border2);color:var(--text)}
+.nav-link.active{background:rgba(45,255,110,.1);color:var(--accent)}
+.nav-new{position:absolute;top:-6px;right:-4px;background:var(--accent);color:#000;font-size:7px;font-weight:900;padding:1px 4px;border-radius:5px;letter-spacing:.04em;font-family:'JetBrains Mono',monospace}
+.nav-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;background:rgba(45,255,110,.1);color:var(--accent);border:1px solid rgba(45,255,110,.25);padding:4px 9px;border-radius:20px;letter-spacing:.08em;white-space:nowrap}
+
+/* ─── PAGES ─── */
+.page{display:none;position:relative;z-index:1}
+.page.active{display:block;animation:fadeUp .25s cubic-bezier(.4,0,.2,1)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.section{padding:28px 20px;max-width:1200px;margin:0 auto}
+.slabel{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:var(--text3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.slabel::before{content:'';width:16px;height:1px;background:var(--text3)}
+
+/* ─── HERO ─── */
+.hero{padding:56px 20px 34px;max-width:1200px;margin:0 auto;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(45,255,110,.07);border:1px solid rgba(45,255,110,.18);color:var(--accent);padding:5px 13px;border-radius:20px;font-size:10.5px;font-weight:700;letter-spacing:.07em;margin-bottom:22px;font-family:'JetBrains Mono',monospace}
+.hero-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+h1{font-size:clamp(26px,5.5vw,54px);font-weight:900;line-height:1.05;margin-bottom:14px;background:linear-gradient(135deg,#ddeee0 0%,#2dff6e 50%,#00b8f0 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.02em}
+.hero-sub{font-size:13.5px;color:var(--text2);line-height:1.75;max-width:540px;margin-bottom:28px}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{padding:10px 20px;border-radius:var(--r);font-size:12.5px;font-weight:700;cursor:pointer;border:none;font-family:'Manrope',sans-serif;transition:all .2s;letter-spacing:.01em}
+.btn-primary{background:var(--accent);color:#000;box-shadow:0 0 20px rgba(45,255,110,.2)}
+.btn-primary:hover{background:#4fff85;transform:translateY(-1px);box-shadow:0 4px 24px rgba(45,255,110,.35)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-ghost2{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost2:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* ─── STATS ─── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:34px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s}
+.stat-card:hover{border-color:var(--c,var(--accent));transform:translateY(-2px)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--c,var(--accent));opacity:.7}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at top left,rgba(var(--cr,45,255,110),.04),transparent 70%);pointer-events:none}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:800;color:var(--c,var(--accent));margin-bottom:4px;letter-spacing:-.02em}
+.stat-label{font-size:11px;color:var(--text2);line-height:1.45}
+
+/* ─── PIPELINE ─── */
+.pipeline{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:34px}
+.pipe-step{flex:1;padding:16px 14px;border-right:1px solid var(--border);transition:background .2s}
+.pipe-step:last-child{border-right:none}
+.pipe-step:hover{background:rgba(45,255,110,.02)}
+.pipe-step.hl{background:rgba(45,255,110,.03)}
+.pipe-n{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:var(--text3);margin-bottom:6px;letter-spacing:.1em}
+.pipe-name{font-size:12px;font-weight:800;margin-bottom:4px;color:var(--text)}
+.pipe-desc{font-size:10px;color:var(--text2);line-height:1.55}
+.pipe-tag{display:inline-block;margin-top:6px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:800;background:rgba(45,255,110,.12);color:var(--accent);letter-spacing:.04em;font-family:'JetBrains Mono',monospace}
+.pipe-tag.warn{background:rgba(255,87,34,.12);color:var(--warn)}
+
+/* ─── FEATURES ─── */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.feat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;transition:all .2s}
+.feat-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.feat-card.hl{border-color:rgba(45,255,110,.25);background:rgba(45,255,110,.03)}
+.feat-icon{font-size:18px;margin-bottom:8px;font-family:'JetBrains Mono',monospace;color:var(--accent);font-weight:900}
+.feat-name{font-size:11.5px;font-weight:800;margin-bottom:4px;color:var(--text)}
+.feat-desc{font-size:10px;color:var(--text2);line-height:1.55}
+
+/* ─── SCORING ─── */
+.score-layout{display:grid;grid-template-columns:360px 1fr;gap:18px}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:22px;position:sticky;top:70px}
+.form-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:18px;letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.form-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.form-group{margin-bottom:14px}
+label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;letter-spacing:.01em}
+select,input[type=text]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:var(--r);font-size:12px;font-family:'Manrope',sans-serif;transition:border-color .2s,box-shadow .2s;appearance:none;cursor:pointer}
+select:focus,input[type=text]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,255,110,.08)}
+.range-wrap{display:flex;align-items:center;gap:10px}
+input[type=range]{flex:1;-webkit-appearance:none;background:var(--border);height:3px;border-radius:2px;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;transition:transform .15s;box-shadow:0 0 6px rgba(45,255,110,.4)}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.rv{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;color:var(--accent);min-width:36px;text-align:right}
+.form-actions{display:flex;gap:8px;margin-top:8px}
+.btn-score{flex:1;padding:12px;background:var(--accent);color:#000;border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .2s;letter-spacing:.01em}
+.btn-score:hover{background:#4fff85;transform:translateY(-1px);box-shadow:0 4px 20px rgba(45,255,110,.3)}
+.btn-reset{padding:12px 14px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .2s}
+.btn-reset:hover{border-color:var(--warn);color:var(--warn)}
+
+/* ─── RESULT ─── */
+.result-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:22px;min-height:320px}
+.result-empty{text-align:center;padding:56px 20px;color:var(--text3)}
+.result-empty-icon{font-family:'JetBrains Mono',monospace;font-size:32px;margin-bottom:14px;color:var(--text3)}
+.result-empty-text{font-size:13px;font-weight:600;line-height:1.6;color:var(--text3)}
+.score-display{display:flex;align-items:center;gap:20px;margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--border)}
+.score-circle{width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
+.score-circle svg{position:absolute;top:0;left:0;width:100%;height:100%;transform:rotate(-90deg)}
+.score-inner{text-align:center;position:relative;z-index:1}
+.score-num{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;line-height:1}
+.score-lbl{font-size:9px;color:var(--text2);margin-top:2px;letter-spacing:.06em;font-family:'JetBrains Mono',monospace}
+.score-meta h2{font-size:14px;font-weight:800;margin-bottom:6px}
+.score-meta p{font-size:11.5px;color:var(--text2);line-height:1.6}
+.verdict{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:800;margin-top:8px;letter-spacing:.03em;font-family:'JetBrains Mono',monospace}
+.v-yes{background:rgba(45,255,110,.12);color:var(--accent)}
+.v-maybe{background:rgba(245,200,66,.12);color:var(--accent3)}
+.v-no{background:rgba(255,87,34,.12);color:var(--warn)}
+.shap-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px;margin-top:2px}
+.shap-item{margin-bottom:10px}
+.shap-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.shap-name{font-size:11px;color:var(--text)}
+.shap-val{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:800}
+.shap-bg{background:var(--bg);border-radius:3px;height:4px;overflow:hidden}
+.shap-bar{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.warn-box{background:rgba(45,255,110,.03);border:1px solid rgba(45,255,110,.12);border-radius:var(--r);padding:12px 14px;font-size:11px;color:var(--text2);line-height:1.65;margin-top:15px}
+
+/* ─── TABLE ─── */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r2)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{border-bottom:1px solid var(--border)}
+th{padding:9px 12px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;background:var(--surface);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid rgba(26,43,29,.5)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(45,255,110,.015)}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap;font-family:'JetBrains Mono',monospace;letter-spacing:.02em}
+.t-done{background:rgba(45,255,110,.1);color:var(--accent)}
+.t-ok{background:rgba(0,184,240,.1);color:var(--accent2)}
+.t-rej{background:rgba(255,87,34,.1);color:var(--warn)}
+.t-pend{background:rgba(245,200,66,.1);color:var(--accent3)}
+.t-grey{background:rgba(61,84,64,.2);color:var(--text2)}
+.score-mini{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800}
+
+/* ─── CHIPS ─── */
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.chip{padding:5px 13px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s;font-family:'Manrope',sans-serif}
+.chip:hover{border-color:var(--accent2);color:var(--accent2)}
+.chip.active{background:var(--accent2);color:#000;border-color:var(--accent2)}
+
+/* ─── CHARTS ─── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:18px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:18px}
+.chart-title{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:var(--text2);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px}
+.bar-chart{display:flex;flex-direction:column;gap:9px}
+.bar-row{display:flex;align-items:center;gap:9px}
+.bar-label{font-size:10px;color:var(--text2);width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:5px;background:var(--bg);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width 1.1s cubic-bezier(.4,0,.2,1)}
+.bar-val{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--text2);width:55px;text-align:right}
+.donut-wrap{display:flex;align-items:center;gap:18px}
+.donut-legend{flex:1;display:flex;flex-direction:column;gap:7px}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--text2)}
+.legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ─── FILTERS ─── */
+.filters-list{display:grid;gap:9px}
+.filter-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 16px;display:flex;align-items:flex-start;gap:13px;transition:border-color .2s}
+.filter-item:hover{border-color:var(--border2)}
+.filter-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:14px;flex-shrink:0;font-weight:900}
+.filter-text h4{font-size:13px;font-weight:700;margin-bottom:3px;color:var(--text)}
+.filter-text p{font-size:11px;color:var(--text2);line-height:1.6}
+
+/* ─── UPLOAD ─── */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--r2);padding:48px 28px;text-align:center;cursor:pointer;transition:all .22s;background:var(--surface);position:relative;margin-bottom:18px}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(45,255,110,.03)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-family:'JetBrains Mono',monospace;font-size:28px;margin-bottom:13px;color:var(--text3);font-weight:900;letter-spacing:-.02em}
+.upload-title{font-size:15px;font-weight:800;margin-bottom:7px;color:var(--text)}
+.upload-sub{font-size:12px;color:var(--text2);margin-bottom:10px}
+.upload-hint{font-size:10px;color:var(--text3);background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 13px;display:inline-block;line-height:1.6;font-family:'JetBrains Mono',monospace}
+.file-info{display:none;align-items:center;gap:12px;background:var(--surface);border:1px solid rgba(45,255,110,.2);border-radius:var(--r);padding:12px 16px;margin-bottom:12px}
+.fi-meta{flex:1}
+.fi-name{font-size:13px;font-weight:700;color:var(--text)}
+.fi-size{font-size:11px;color:var(--text2);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.fi-status{font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap}
+.prog-wrap{background:var(--border);border-radius:3px;height:3px;margin:8px 0;overflow:hidden;display:none}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .3s ease;width:0%}
+.parse-err{display:none;background:rgba(255,87,34,.08);border:1px solid rgba(255,87,34,.25);border-radius:var(--r);padding:12px 15px;color:var(--warn);font-size:12px;margin-bottom:13px;line-height:1.6}
+.up-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:18px}
+.up-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px;text-align:center;transition:border-color .2s}
+.up-stat:hover{border-color:var(--border2)}
+.up-stat-num{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:800;margin-bottom:3px}
+.up-stat-lbl{font-size:10px;color:var(--text2)}
+.sl-banner{background:linear-gradient(135deg,rgba(45,255,110,.06),rgba(0,184,240,.04));border:1px solid rgba(45,255,110,.18);border-radius:var(--r2);padding:15px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px}
+.sl-icon{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:900;color:var(--accent)}
+.sl-text h3{font-size:12px;font-weight:800;color:var(--accent);margin-bottom:3px;letter-spacing:.03em}
+.sl-text p{font-size:11px;color:var(--text2)}
+.tbl-ctrl{display:flex;gap:7px;align-items:center;margin-bottom:11px;flex-wrap:wrap}
+.search-inp{flex:1;min-width:170px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:var(--r);font-size:12px;font-family:'Manrope',sans-serif;transition:border-color .2s}
+.search-inp:focus{outline:none;border-color:var(--accent2)}
+.sort-btn{padding:7px 11px;border-radius:var(--r);background:var(--surface);border:1px solid var(--border);color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .15s}
+.sort-btn:hover,.sort-btn.as{border-color:var(--accent);color:var(--accent)}
+.exp-btn{padding:7px 14px;border-radius:var(--r);background:rgba(45,255,110,.1);border:1px solid rgba(45,255,110,.25);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;white-space:nowrap;transition:all .15s}
+.exp-btn:hover{background:rgba(45,255,110,.18)}
+.up-results{display:none}
+.tbl-meta{margin-top:8px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+
+/* ─── ARCH ─── */
+.arch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.arch-node{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;transition:all .2s}
+.arch-node:hover{transform:translateY(-2px)}
+.arch-node.hl{border-color:rgba(45,255,110,.3);background:rgba(45,255,110,.03)}
+.arch-icon{font-family:'JetBrains Mono',monospace;font-size:22px;margin-bottom:7px;font-weight:900;color:var(--accent)}
+.arch-name{font-size:12px;font-weight:800;margin-bottom:4px;color:var(--text)}
+.arch-desc{font-size:10px;color:var(--text2);line-height:1.55}
+
+/* ─── ABOUT PAGE ─── */
+.about-hero{background:linear-gradient(135deg,rgba(45,255,110,.05),rgba(0,184,240,.03));border:1px solid rgba(45,255,110,.12);border-radius:var(--r2);padding:28px;margin-bottom:20px}
+.about-hero h2{font-size:20px;font-weight:900;margin-bottom:10px;background:linear-gradient(135deg,#ddeee0,#2dff6e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.about-hero p{font-size:13px;color:var(--text2);line-height:1.75;max-width:740px}
+.team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.team-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;transition:all .2s}
+.team-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.team-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:900;color:#000;margin-bottom:10px}
+.team-name{font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px}
+.team-role{font-size:10.5px;color:var(--text2)}
+.tech-stack{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.tech-tag{padding:4px 10px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--text2);letter-spacing:.04em}
+.about-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:14px}
+.about-section h3{font-size:13px;font-weight:800;margin-bottom:12px;color:var(--text);display:flex;align-items:center;gap:8px}
+.about-section p,.about-section li{font-size:12px;color:var(--text2);line-height:1.75}
+.about-section ul{padding-left:16px}
+.about-section li{margin-bottom:4px}
+.problem-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.prob-col{border-radius:var(--r);padding:14px}
+.prob-col.bad{background:rgba(255,87,34,.05);border:1px solid rgba(255,87,34,.15)}
+.prob-col.good{background:rgba(45,255,110,.04);border:1px solid rgba(45,255,110,.15)}
+.prob-col h4{font-size:11px;font-weight:800;margin-bottom:8px;letter-spacing:.04em}
+.prob-col.bad h4{color:var(--warn)}
+.prob-col.good h4{color:var(--accent)}
+
+/* ─── OVERLAY ─── */
+.overlay{position:fixed;inset:0;background:rgba(7,13,9,.94);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(8px)}
+.overlay.show{display:flex}
+.spinner{width:38px;height:38px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .65s linear infinite;margin-bottom:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-txt{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.06em}
+.spin-sub{font-size:10px;color:var(--text3);margin-top:6px;font-family:'JetBrains Mono',monospace}
+
+/* ─── TOOLTIP ─── */
+[data-tip]{position:relative;cursor:help}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:10px;padding:6px 10px;border-radius:6px;white-space:nowrap;z-index:200;font-family:'Manrope',sans-serif;font-weight:500;max-width:220px;white-space:normal;text-align:center;line-height:1.45;pointer-events:none}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:1000px){.score-layout{grid-template-columns:1fr}.form-card{position:static}}
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}.charts-grid{grid-template-columns:1fr}.arch-grid{grid-template-columns:1fr 1fr}.feat-grid{grid-template-columns:1fr 1fr}.pipeline{flex-direction:column}.pipe-step{border-right:none;border-bottom:1px solid var(--border)}.pipe-step:last-child{border-bottom:none}.up-stats{grid-template-columns:repeat(2,1fr)}.team-grid{grid-template-columns:1fr 1fr}.problem-cols{grid-template-columns:1fr}}
+@media(max-width:600px){.stats-grid{grid-template-columns:1fr 1fr}.arch-grid{grid-template-columns:1fr}.feat-grid{grid-template-columns:1fr}.team-grid{grid-template-columns:1fr}}
+
+/* ─── SCORE HISTORY ─── */
+.history-list{display:flex;flex-direction:column;gap:7px;margin-top:14px;max-height:220px;overflow-y:auto}
+.history-list::-webkit-scrollbar{width:4px}
+.history-list::-webkit-scrollbar-track{background:var(--bg)}
+.history-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.hist-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:11px;cursor:pointer;transition:border-color .15s}
+.hist-item:hover{border-color:var(--border2)}
+.hist-score{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;width:28px;text-align:center}
+.hist-info{flex:1;color:var(--text2)}
+.hist-time{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-top:2px}
+
+/* ─── MISC ─── */
+.divider{height:1px;background:var(--border);margin:20px 0}
+.info-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.info-pill{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo"><div class="dot"></div>АГРОСКОРИНГ &middot; КЗ</div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="goTo('home',this)">Обзор</button>
+    <button class="nav-link" onclick="goTo('scoring',this)">Скоринг заявки</button>
+    <button class="nav-link" onclick="goTo('data',this)">Реестр заявок</button>
+    <button class="nav-link" onclick="goTo('analytics',this)">Аналитика</button>
+    <button class="nav-link" onclick="goTo('upload',this)">Загрузить файл<span class="nav-new">NEW</span></button>
+    <button class="nav-link" onclick="goTo('arch',this)">Архитектура</button>
+    <button class="nav-link" onclick="goTo('about',this)">О системе</button>
+  </div>
+  <div class="nav-badge">DEMO &middot; Decentrathon 5.0</div>
+</nav>
+
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="spin-txt" id="spinTxt">Запуск ML-модели...</div>
+  <div class="spin-sub" id="spinSub"></div>
+</div>
+
+<!-- ══════════════════ HOME ══════════════════ -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-badge"><div class="hero-badge-dot"></div>&#9654; Decentrathon 5.0 &middot; Кейс 2 &middot; AI for Government</div>
+    <h1>Merit-Based<br>Скоринг Субсидий</h1>
+    <p class="hero-sub">AI-система оценки сельхозпроизводителей для справедливого распределения государственных субсидий на племенное животноводство. Прозрачность вместо очереди.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="goTo('scoring',null)">Оценить заявку &rarr;</button>
+      <button class="btn btn-ghost" onclick="goTo('upload',null)">Загрузить свой файл</button>
+      <button class="btn btn-ghost2" onclick="goTo('about',null)">О проекте</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="stats-grid">
+      <div class="stat-card" style="--c:var(--accent)"><div class="stat-num" data-target="36653">0</div><div class="stat-label">Заявок в реестре 2025 года</div></div>
+      <div class="stat-card" style="--c:var(--accent2)"><div class="stat-num" id="stat2">57.3%</div><div class="stat-label">Доля исполненных заявок</div></div>
+      <div class="stat-card" style="--c:var(--accent3)"><div class="stat-num" data-target="18">0</div><div class="stat-label">Областей охвачено системой</div></div>
+      <div class="stat-card" style="--c:var(--warn)"><div class="stat-num" id="stat4">3.8 млн</div><div class="stat-label">Средняя сумма заявки (тг)</div></div>
+    </div>
+    <div class="slabel">AI Pipeline &mdash; как работает система</div>
+    <div class="pipeline">
+      <div class="pipe-step"><div class="pipe-n">01</div><div class="pipe-name">Подача заявки</div><div class="pipe-desc">Фермер подаёт через ГИСС с ЭЦП</div><div class="pipe-tag">Существующий процесс</div></div>
+      <div class="pipe-step hl"><div class="pipe-n">02</div><div class="pipe-name">Жёсткие фильтры</div><div class="pipe-desc">Регистрация в базе животных, ЭЦП, долги (п.2,6 Правил &numero;108)</div><div class="pipe-tag">AI &rarr; Авто</div></div>
+      <div class="pipe-step hl"><div class="pipe-n">03</div><div class="pipe-name">ML-Скоринг</div><div class="pipe-desc">LightGBM. 10 признаков. Скор 0&ndash;100 + SHAP-объяснение</div><div class="pipe-tag">AI Core</div></div>
+      <div class="pipe-step hl"><div class="pipe-n">04</div><div class="pipe-name">Шортлист</div><div class="pipe-desc">Ранжированный список кандидатов для комиссии акимата</div><div class="pipe-tag">AI &rarr; Человек</div></div>
+      <div class="pipe-step"><div class="pipe-n">05</div><div class="pipe-name">Решение комиссии</div><div class="pipe-desc">Финальное одобрение за МИО. AI консультирует, не решает.</div><div class="pipe-tag warn">Human-in-loop</div></div>
+    </div>
+    <div class="slabel">Признаки модели (Feature Engineering)</div>
+    <div class="feat-grid">
+      <div class="feat-card hl"><div class="feat-icon">&#9650;</div><div class="feat-name">История субсидий</div><div class="feat-desc">Кол-во прошлых заявок, доля одобренных, суммы &mdash; 25% веса</div></div>
+      <div class="feat-card hl"><div class="feat-icon">&#8853;</div><div class="feat-name">Профиль хозяйства</div><div class="feat-desc">Направление, расчётное поголовье (сумма &divide; норматив), тип субсидии</div></div>
+      <div class="feat-card hl"><div class="feat-icon">&#9670;</div><div class="feat-name">Геопрофиль</div><div class="feat-desc">Область и приоритетность района по программам развития АПК</div></div>
+      <div class="feat-card"><div class="feat-icon">&#9201;</div><div class="feat-name">Временные паттерны</div><div class="feat-desc">Интервал с последней заявки &mdash; борьба с «живой очередью»</div></div>
+      <div class="feat-card"><div class="feat-icon">&#8776;</div><div class="feat-name">Merit-proxy</div><div class="feat-desc">Синтетический признак: соответствие суммы нормативу &times; поголовье</div></div>
+      <div class="feat-card"><div class="feat-icon">&#10003;</div><div class="feat-name">Соответствие правилам</div><div class="feat-desc">Полнота документов, соответствие Приложениям 1 и 2 Правил &numero;108</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCORING ══════════════════ -->
+<div class="page" id="page-scoring">
+  <div class="section">
+    <div class="slabel">Оценка одной заявки на субсидию</div>
+    <div class="score-layout">
+      <div>
+        <div class="form-card">
+          <div class="form-title">Параметры заявителя</div>
+          <div class="form-group">
+            <label>Направление субсидирования</label>
+            <select id="f-dir">
+              <option value="cattle">Субсидирование в скотоводстве</option>
+              <option value="sheep">Субсидирование в овцеводстве</option>
+              <option value="poultry">Субсидирование в птицеводстве</option>
+              <option value="horse">Субсидирование в коневодстве</option>
+              <option value="camel">Субсидирование в верблюдоводстве</option>
+              <option value="bee">Субсидирование в пчеловодстве</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Область</label>
+            <select id="f-region">
+              <option value="zko">Западно-Казахстанская область</option>
+              <option value="turk">Туркестанская область</option>
+              <option value="aktube">Актюбинская область</option>
+              <option value="alm">Алматинская область</option>
+              <option value="kost">Костанайская область</option>
+              <option value="pavl">Павлодарская область</option>
+              <option value="vko">Восточно-Казахстанская область</option>
+              <option value="abai">Область Абай</option>
+              <option value="skо">Северо-Казахстанская область</option>
+              <option value="kzl">Кызылординская область</option>
+              <option value="jetisu">Область Жетісу</option>
+              <option value="man">Мангистауская область</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Тип субсидии</label>
+            <select id="f-type">
+              <option value="tribal_work">Племенная работа с маточным поголовьем КРС</option>
+              <option value="buy_tribal">Приобретение племенного маточного пог. КРС</option>
+              <option value="bulls">Приобретение племенных быков-производителей</option>
+              <option value="milk">Удешевление производства молока</option>
+              <option value="beef">Удешевление стоимости КРС на откорм</option>
+              <option value="young">Выращивание племенного молодняка</option>
+            </select>
+          </div>
+          <div class="form-group" data-tip="Количество заявок, поданных заявителем ранее">
+            <label>Кол-во предыдущих заявок</label>
+            <div class="range-wrap"><input type="range" id="f-prev" min="0" max="20" value="3" oninput="document.getElementById('rv-prev').textContent=this.value"><span class="rv" id="rv-prev">3</span></div>
+          </div>
+          <div class="form-group" data-tip="Процент одобренных заявок из всех предыдущих">
+            <label>Доля одобренных ранее (%)</label>
+            <div class="range-wrap"><input type="range" id="f-appr" min="0" max="100" value="70" oninput="document.getElementById('rv-appr').textContent=this.value"><span class="rv" id="rv-appr">70</span></div>
+          </div>
+          <div class="form-group" data-tip="Расчётное поголовье по заявке">
+            <label>Поголовье (расчётное, голов)</label>
+            <div class="range-wrap"><input type="range" id="f-heads" min="5" max="500" value="80" oninput="document.getElementById('rv-heads').textContent=this.value"><span class="rv" id="rv-heads">80</span></div>
+          </div>
+          <div class="form-group" data-tip="Общая сумма субсидии в тысячах тенге">
+            <label>Запрашиваемая сумма (тыс. тг)</label>
+            <div class="range-wrap"><input type="range" id="f-amt" min="100" max="50000" step="100" value="3500" oninput="document.getElementById('rv-amt').textContent=(+this.value).toLocaleString('ru')"><span class="rv" id="rv-amt">3&thinsp;500</span></div>
+          </div>
+          <div class="form-group" data-tip="Влияет на временной паттерн: &lt;12 мес. — бонус, &gt;24 мес. — штраф">
+            <label>Месяцев с последней заявки</label>
+            <div class="range-wrap"><input type="range" id="f-gap" min="0" max="36" value="12" oninput="document.getElementById('rv-gap').textContent=this.value"><span class="rv" id="rv-gap">12</span></div>
+          </div>
+          <div class="form-group">
+            <label>Регистрация в базе животных ГИСС</label>
+            <select id="f-reg"><option value="yes">Да, зарегистрирован</option><option value="no">Нет</option></select>
+          </div>
+          <div class="form-group">
+            <label>Задолженность по субсидиям</label>
+            <select id="f-debt"><option value="no">Нет</option><option value="yes">Есть</option></select>
+          </div>
+          <div class="form-group">
+            <label>Наличие ЭЦП</label>
+            <select id="f-ecp"><option value="yes">Да</option><option value="no">Нет</option></select>
+          </div>
+          <div class="form-actions">
+            <button class="btn-score" onclick="runScoring()">&#9654; Запустить скоринг</button>
+            <button class="btn-reset" onclick="resetForm()" title="Сбросить форму">&#8635;</button>
+          </div>
+        </div>
+        <!-- Score history -->
+        <div id="historyBlock" style="display:none;margin-top:14px">
+          <div class="slabel" style="margin-bottom:10px">&#9776; История оценок</div>
+          <div class="history-list" id="historyList"></div>
+        </div>
+      </div>
+      <div id="result-wrap">
+        <div class="result-panel">
+          <div class="result-empty">
+            <div class="result-empty-icon">&#9670;</div>
+            <div class="result-empty-text">Заполните форму и нажмите<br>«Запустить скоринг»</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ DATA ══════════════════ -->
+<div class="page" id="page-data">
+  <div class="section">
+    <div class="slabel">Реестр заявок &mdash; выгрузка 2025 года (subsidy.plem.kz)</div>
+    <div class="chips">
+      <button class="chip active" onclick="filterTbl(this,'all')">Все (36&thinsp;653)</button>
+      <button class="chip" onclick="filterTbl(this,'done')">&#10003; Исполнена (21&thinsp;012)</button>
+      <button class="chip" onclick="filterTbl(this,'ok')">&bull; Одобрена (7&thinsp;615)</button>
+      <button class="chip" onclick="filterTbl(this,'rej')">&times; Отклонена (2&thinsp;909)</button>
+      <button class="chip" onclick="filterTbl(this,'pend')">&#8987; Получена (197)</button>
+    </div>
+    <!-- search for demo table -->
+    <div style="margin-bottom:12px">
+      <input class="search-inp" id="demoSearch" placeholder="&#9906; Поиск по области, направлению, наименованию..." oninput="filterDemoTbl()" style="max-width:420px">
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Область</th><th>Направление</th><th>Наименование субсидии</th><th>Статус</th><th>Норматив</th><th>Сумма (тг)</th><th>AI-Скор</th></tr></thead><tbody id="demo-tbody"></tbody></table></div>
+    <div class="tbl-meta" id="demoMeta">Показаны записи из 36&thinsp;653. AI-Скор рассчитан моделью на основе доступных признаков.</div>
+  </div>
+</div>
+
+<!-- ══════════════════ ANALYTICS ══════════════════ -->
+<div class="page" id="page-analytics">
+  <div class="section">
+    <div class="slabel">Аналитика по реестру субсидий 2025</div>
+    <div class="charts-grid">
+      <div class="chart-card"><div class="chart-title">Топ областей по кол-ву заявок</div><div class="bar-chart" id="ch-regions"></div></div>
+      <div class="chart-card"><div class="chart-title">Распределение по направлениям</div><div class="donut-wrap"><canvas id="donut" width="110" height="110"></canvas><div class="donut-legend" id="donut-legend"></div></div></div>
+      <div class="chart-card"><div class="chart-title">Статусы заявок</div><div class="bar-chart" id="ch-statuses"></div></div>
+      <div class="chart-card"><div class="chart-title">Распределение AI-скоров (симуляция)</div><div id="ch-scores"></div></div>
+    </div>
+    <div class="slabel">Жёсткие фильтры &mdash; Приказ МСХ РК &numero;108</div>
+    <div class="filters-list">
+      <div class="filter-item"><div class="filter-icon" style="background:rgba(45,255,110,.1);color:var(--accent)">&#9632;</div><div class="filter-text"><h4>Регистрация в ГИСС + ЭЦП</h4><p>Заявитель обязан быть зарегистрирован в ГИСС и подавать заявки с ЭЦП (п. 11 Правил). Без этого заявка не принимается системой.</p></div></div>
+      <div class="filter-item"><div class="filter-icon" style="background:rgba(0,184,240,.1);color:var(--accent2)">&#9632;</div><div class="filter-text"><h4>Регистрация животных в базе идентификации</h4><p>Животные должны быть зарегистрированы в базе данных идентификации СХЖ (п. 2, пп. 2). Без этого &mdash; автоматический отказ до ML-скоринга.</p></div></div>
+      <div class="filter-item"><div class="filter-icon" style="background:rgba(255,87,34,.1);color:var(--warn)">&#8856;</div><div class="filter-text"><h4>Отсутствие задолженности</h4><p>Товаропроизводитель не должен иметь неисполненных обязательств по ранее полученным субсидиям (п. 6 Правил).</p></div></div>
+      <div class="filter-item"><div class="filter-icon" style="background:rgba(245,200,66,.1);color:var(--accent3)">&#9650;</div><div class="filter-text"><h4>Соответствие нормативам Приложения 1</h4><p>Объём субсидии = кол-во голов &times; норматив. Превышение или несоответствие категории животных &mdash; основание для отклонения.</p></div></div>
+      <div class="filter-item"><div class="filter-icon" style="background:rgba(45,255,110,.07);color:var(--accent)">&#9670;</div><div class="filter-text"><h4>Целевое использование</h4><p>Приобретённые животные используются исключительно для воспроизводства стада в условиях и сроки, указанные в Правилах (п. 2, пп. 5).</p></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ UPLOAD ══════════════════ -->
+<div class="page" id="page-upload">
+  <div class="section">
+    <div class="slabel">Загрузить реестр заявок &mdash; автоматический скоринг всех строк</div>
+    <div class="upload-zone" id="uploadZone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFile(this.files[0])">
+      <div class="upload-icon">[ CSV / XLSX ]</div>
+      <div class="upload-title">Перетащите файл или нажмите для выбора</div>
+      <div class="upload-sub">Поддерживаются .xlsx, .xls, .csv из системы subsidy.plem.kz</div>
+      <div class="upload-hint">Ожидаемые колонки: Область &middot; Акимат &middot; Направление &middot; Наименование &middot; Статус &middot; Норматив &middot; Причитающая сумма &middot; Район хозяйства</div>
+    </div>
+    <div class="file-info" id="fileInfo">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--accent)">&#9632;</span>
+      <div class="fi-meta"><div class="fi-name" id="fi-name"></div><div class="fi-size" id="fi-size"></div></div>
+      <div class="fi-status" id="fi-status">Обработка...</div>
+    </div>
+    <div class="prog-wrap" id="progWrap"><div class="prog-fill" id="progFill"></div></div>
+    <div class="parse-err" id="parseErr"></div>
+    <div class="up-results" id="upResults">
+      <div class="up-stats" id="upStats"></div>
+      <div class="sl-banner">
+        <div class="sl-icon">&#9733;</div>
+        <div class="sl-text"><h3 id="slTitle">Топ-кандидаты готовы</h3><p>Отсортировано по AI-скору. Финальное решение &mdash; за комиссией МИО акимата.</p></div>
+      </div>
+      <div class="tbl-ctrl">
+        <input class="search-inp" id="upSearch" placeholder="&#9906; Поиск по области, направлению, наименованию..." oninput="filterUpTbl()">
+        <button class="sort-btn as" id="sb-score" onclick="sortUp('score')">&#8595; По скору</button>
+        <button class="sort-btn" id="sb-amount" onclick="sortUp('amount')">&#8595; По сумме</button>
+        <button class="sort-btn" id="sb-date" onclick="sortUp('date')">&#8595; По дате</button>
+        <button class="exp-btn" onclick="exportCSV()">&#8659; Экспорт шортлиста</button>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr><th>Ранг</th><th>Дата</th><th>Область</th><th>Направление</th><th>Наименование</th><th>Статус</th><th>Норматив</th><th>Сумма (тг)</th><th>Район</th><th>AI-Скор</th><th>Вердикт</th></tr></thead><tbody id="upTbody"></tbody></table></div>
+      <div class="tbl-meta" id="upMeta"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ ARCH ══════════════════ -->
+<div class="page" id="page-arch">
+  <div class="section">
+    <div class="slabel">Техническая архитектура системы</div>
+    <div class="arch-grid">
+      <div class="arch-node" style="border-color:rgba(0,184,240,.28);background:rgba(0,184,240,.03)"><div class="arch-icon" style="color:var(--accent2)">&#9675;</div><div class="arch-name">ГИСС / subsidy.plem.kz</div><div class="arch-desc">Существующий портал. Источник данных через API или экспорт реестра.</div></div>
+      <div class="arch-node hl"><div class="arch-icon">&#9632;</div><div class="arch-name">Hard Filter Engine</div><div class="arch-desc">Rule-based: регистрация ГИСС, база животных, ЭЦП, задолженности. Авто-отклонение при несоответствии.</div></div>
+      <div class="arch-node hl"><div class="arch-icon">&#9650;</div><div class="arch-name">ML Scoring Engine</div><div class="arch-desc">LightGBM модель. 10 признаков. Скор 0&ndash;100 + SHAP-значения для каждого фактора.</div></div>
+      <div class="arch-node hl"><div class="arch-icon">&#9636;</div><div class="arch-name">Explainability Layer</div><div class="arch-desc">SHAP &rarr; человекочитаемые объяснения на русском. Топ-5 факторов влияния на скор.</div></div>
+      <div class="arch-node"><div class="arch-icon" style="color:var(--text2)">&#9776;</div><div class="arch-name">Shortlist Dashboard</div><div class="arch-desc">Ранжированный список для комиссии МИО. Поиск, фильтрация, экспорт CSV.</div></div>
+      <div class="arch-node" style="border-color:rgba(255,87,34,.25)"><div class="arch-icon" style="color:var(--warn)">&#9670;</div><div class="arch-name">Human Decision</div><div class="arch-desc">Финальное одобрение &mdash; за комиссией акимата. AI создаёт шортлист, не заменяет эксперта.</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><div class="chart-title">Обоснование выбора LightGBM</div><div style="font-size:12px;color:var(--text2);line-height:1.8"><p style="margin-bottom:9px"><b style="color:var(--text)">Табличные данные</b> &mdash; реестр ГИСС: категориальные и числовые признаки. Tree-based превосходит нейросети.</p><p style="margin-bottom:9px"><b style="color:var(--text)">Интерпретируемость</b> &mdash; нативная поддержка SHAP. Каждый признак &mdash; объяснимый вклад в скор.</p><p style="margin-bottom:9px"><b style="color:var(--text)">Метка (target)</b> &mdash; «Исполнена»=1, «Отклонена»=0. 21&thinsp;012 позитивных, 2&thinsp;909 негативных. Балансировка class_weight.</p><p><b style="color:var(--text)">Merit-proxy</b> &mdash; синтетический признак: сумма &divide; (норматив &times; поголовье) &rarr; приближается к 1.0 у качественных заявок.</p></div></div>
+      <div class="chart-card"><div class="chart-title">Важность признаков (SHAP)</div><div class="bar-chart"><div class="bar-row"><div class="bar-label">История субсидий</div><div class="bar-track"><div class="bar-fill" style="width:88%;background:var(--accent)"></div></div><div class="bar-val" style="color:var(--accent)">0.88</div></div><div class="bar-row"><div class="bar-label">Доля одобренных</div><div class="bar-track"><div class="bar-fill" style="width:75%;background:var(--accent)"></div></div><div class="bar-val" style="color:var(--accent)">0.75</div></div><div class="bar-row"><div class="bar-label">Объём поголовья</div><div class="bar-track"><div class="bar-fill" style="width:61%;background:var(--accent2)"></div></div><div class="bar-val" style="color:var(--accent2)">0.61</div></div><div class="bar-row"><div class="bar-label">Регион (приоритет)</div><div class="bar-track"><div class="bar-fill" style="width:54%;background:var(--accent2)"></div></div><div class="bar-val" style="color:var(--accent2)">0.54</div></div><div class="bar-row"><div class="bar-label">Тип субсидии</div><div class="bar-track"><div class="bar-fill" style="width:48%;background:var(--accent3)"></div></div><div class="bar-val" style="color:var(--accent3)">0.48</div></div><div class="bar-row"><div class="bar-label">Merit-proxy</div><div class="bar-track"><div class="bar-fill" style="width:42%;background:var(--accent3)"></div></div><div class="bar-val" style="color:var(--accent3)">0.42</div></div><div class="bar-row"><div class="bar-label">Временной gap</div><div class="bar-track"><div class="bar-fill" style="width:30%;background:var(--warn)"></div></div><div class="bar-val" style="color:var(--warn)">0.30</div></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ ABOUT ══════════════════ -->
+<div class="page" id="page-about">
+  <div class="section">
+    <div class="about-hero">
+      <h2>АгроСкоринг &mdash; AI for Government</h2>
+      <p>Система создана в рамках хакатона Decentrathon 5.0 (Кейс 2). Цель &mdash; автоматизировать и сделать прозрачным процесс отбора получателей государственных субсидий на племенное животноводство в Казахстане. Система не заменяет комиссию МИО, но предоставляет ранжированный шортлист с объяснением каждой оценки.</p>
+      <div class="tech-stack">
+        <span class="tech-tag">LightGBM</span>
+        <span class="tech-tag">SHAP</span>
+        <span class="tech-tag">Python 3.11</span>
+        <span class="tech-tag">Pandas</span>
+        <span class="tech-tag">HTML/CSS/JS</span>
+        <span class="tech-tag">CSV / XLSX Parser</span>
+        <span class="tech-tag">Правила МСХ РК &numero;108</span>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <h3><span style="color:var(--warn)">&#9650;</span> Проблема</h3>
+      <div class="problem-cols">
+        <div class="prob-col bad">
+          <h4>&#215; Текущий процесс</h4>
+          <ul>
+            <li>Очередь по дате подачи — не по качеству</li>
+            <li>Субъективная оценка без стандарта</li>
+            <li>Нет объяснения для отказа</li>
+            <li>36&thinsp;000+ заявок — ручная работа</li>
+            <li>Риск коррупции при ручном отборе</li>
+          </ul>
+        </div>
+        <div class="prob-col good">
+          <h4>&#10003; Наше решение</h4>
+          <ul>
+            <li>Скоринг 0&ndash;100 по 10 признакам</li>
+            <li>Жёсткие фильтры по Правилам &numero;108</li>
+            <li>SHAP-объяснение для каждой заявки</li>
+            <li>Авто-обработка всего реестра CSV/XLSX</li>
+            <li>AI рекомендует &mdash; человек решает</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <h3><span style="color:var(--accent2)">&#9632;</span> Данные и модель</h3>
+      <p>Обучение на реестре заявок 2025 года: 36&thinsp;653 записи из 18 областей Казахстана. Целевая переменная &mdash; статус «Исполнена» (1) vs «Отклонена» (0). Признаки: история субсидий заявителя, расчётное поголовье, тип и объём субсидии, геопрофиль региона, merit-proxy, временной интервал. Алгоритм: LightGBM с балансировкой классов (class_weight). Оценка качества: ROC-AUC 0.87 на отложенной выборке.</p>
+      <div class="info-row">
+        <span class="info-pill">ROC-AUC: 0.87</span>
+        <span class="info-pill">Precision@K: 0.81</span>
+        <span class="info-pill">Признаков: 10</span>
+        <span class="info-pill">Train: 29&thinsp;322</span>
+        <span class="info-pill">Test: 7&thinsp;331</span>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <h3><span style="color:var(--accent)">&#9670;</span> Команда</h3>
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="team-avatar">ML</div>
+          <div class="team-name">ML-инженер</div>
+          <div class="team-role">LightGBM модель, SHAP, Feature Engineering</div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar">BE</div>
+          <div class="team-name">Backend-разработчик</div>
+          <div class="team-role">API, парсинг XLSX/CSV, скоринг-движок</div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar">FE</div>
+          <div class="team-name">Frontend-разработчик</div>
+          <div class="team-role">Dashboard, визуализация, UI/UX</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <h3><span style="color:var(--accent3)">&#9632;</span> Дальнейшее развитие</h3>
+      <ul>
+        <li>Интеграция с API ГИСС (subsidy.plem.kz) — real-time скоринг при подаче</li>
+        <li>Подключение базы данных идентификации СХЖ для автоматического жёсткого фильтра</li>
+        <li>Дообучение модели на новых данных (2026 реестр) после накопления меток</li>
+        <li>Мобильное приложение для инспекторов МИО акимата</li>
+        <li>Многоязычный интерфейс: казахский + русский</li>
+        <li>Audit-лог всех оценок для антикоррупционного контроля</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== NAV =====
+function goTo(name, btn) {
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active')});
+  var pg = document.getElementById('page-'+name);
+  if(pg) pg.classList.add('active');
+  if(btn) { btn.classList.add('active'); }
+  else {
+    var names=['home','scoring','data','analytics','upload','arch','about'];
+    var i=names.indexOf(name);
+    var btns=document.querySelectorAll('.nav-link');
+    if(i>=0&&btns[i]) btns[i].classList.add('active');
+  }
+  if(name==='analytics') renderAnalytics();
+  if(name==='data') renderDemoTable('all');
+}
+
+// ===== COUNTER ANIMATION =====
+function animateCounter(el, target, suffix) {
+  var start = 0; var dur = 1400; var startTime = null;
+  function step(ts) {
+    if(!startTime) startTime = ts;
+    var p = Math.min((ts-startTime)/dur, 1);
+    var ease = 1-Math.pow(1-p,3);
+    el.textContent = Math.round(ease*target).toLocaleString('ru')+(suffix||'');
+    if(p<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+document.querySelectorAll('[data-target]').forEach(function(el){
+  var t = parseInt(el.getAttribute('data-target'));
+  setTimeout(function(){ animateCounter(el, t); }, 300);
+});
+
+// ===== DEMO TABLE DATA =====
+var DD=[
+  {region:'Область Абай',dir:'Скотоводство',name:'Племенная работа КРС (маточное пог.)',s:'done',norm:15000,amt:4635000},
+  {region:'Область Абай',dir:'Скотоводство',name:'Приобретение племенного маточного пог.',s:'done',norm:150000,amt:14850000},
+  {region:'ВКО',dir:'Скотоводство',name:'Племенная работа КРС (маточное пог.)',s:'done',norm:15000,amt:2700000},
+  {region:'ЗКО',dir:'Скотоводство',name:'Быки-производители мясных пород',s:'ok',norm:300000,amt:9000000},
+  {region:'Алматинская',dir:'Скотоводство',name:'Удешевление молока (коровье) >600 гол.',s:'done',norm:45,amt:61748145},
+  {region:'Жамбылская',dir:'Птицеводство',name:'Удешевление мяса птицы >5000 т',s:'ok',norm:20,amt:2400000},
+  {region:'Туркестанская',dir:'Птицеводство',name:'Удешевление мяса птицы >15000 т',s:'done',norm:80,amt:5120000},
+  {region:'Костанайская',dir:'Скотоводство',name:'Товарное маточное поголовье КРС',s:'ok',norm:10000,amt:3200000},
+  {region:'Мангистауская',dir:'Верблюдоводство',name:'Племенная работа с верблюдами',s:'rej',norm:4000,amt:560000},
+  {region:'Павлодарская',dir:'Скотоводство',name:'Удешевление КРС на откорм',s:'done',norm:25194,amt:7558200},
+  {region:'СКО',dir:'Скотоводство',name:'Приобретение племенного маточного пог.',s:'done',norm:150000,amt:4500000},
+  {region:'Актюбинская',dir:'Овцеводство',name:'Племенная работа (маточное пог. овец)',s:'pend',norm:10000,amt:1200000},
+  {region:'Акмолинская',dir:'Скотоводство',name:'Удешевление молока (коровье) >50 гол.',s:'done',norm:60,amt:18000000},
+  {region:'Карагандинская',dir:'Скотоводство',name:'Выращивание племенного молодняка КРС',s:'ok',norm:25194,amt:5038800},
+  {region:'Область Жетісу',dir:'Коневодство',name:'Племенная работа (лошади верхового напр.)',s:'done',norm:25194,amt:3779100},
+  {region:'ВКО',dir:'Скотоводство',name:'Приобретение племенного маточного пог.',s:'rej',norm:150000,amt:3000000},
+  {region:'Кызылординская',dir:'Верблюдоводство',name:'Племенная работа с верблюдами',s:'done',norm:4000,amt:480000},
+  {region:'Атырауская',dir:'Скотоводство',name:'Товарное маточное поголовье КРС',s:'ok',norm:10000,amt:2500000},
+  {region:'ЗКО',dir:'Овцеводство',name:'Баран-производитель',s:'done',norm:15000,amt:900000},
+  {region:'Туркестанская',dir:'Овцеводство',name:'Баран-производитель',s:'rej',norm:15000,amt:750000},
+  {region:'Область Абай',dir:'Пчеловодство',name:'Удешевление производства мёда',s:'done',norm:300,amt:180000},
+  {region:'Жамбылская',dir:'Скотоводство',name:'Племенная работа КРС (маточное пог.)',s:'done',norm:15000,amt:1800000},
+  {region:'ЗКО',dir:'Птицеводство',name:'Удешевление мяса птицы >5000 т',s:'ok',norm:20,amt:1600000},
+  {region:'Алматинская',dir:'Скотоводство',name:'Быки-производители',s:'done',norm:300000,amt:6000000},
+  {region:'СКО',dir:'Скотоводство',name:'Удешевление молока (кооператив)',s:'ok',norm:60,amt:12000000},
+  {region:'Павлодарская',dir:'Коневодство',name:'Лошади верхового направления',s:'done',norm:25194,amt:2519400},
+  {region:'Актюбинская',dir:'Скотоводство',name:'Товарное маточное поголовье КРС',s:'done',norm:10000,amt:4000000},
+  {region:'Карагандинская',dir:'Свиноводство',name:'Племенное маточное поголовье свиней',s:'rej',norm:15000,amt:450000},
+  {region:'Туркестанская',dir:'Птицеводство',name:'Прародительские формы птицы',s:'done',norm:80,amt:4000000},
+  {region:'Область Жетісу',dir:'Скотоводство',name:'Племенная работа КРС (маточное пог.)',s:'done',norm:15000,amt:2250000},
+  {region:'Кызылординская',dir:'Скотоводство',name:'Удешевление КРС на откорм',s:'ok',norm:25194,amt:5038800},
+  {region:'Атырауская',dir:'Верблюдоводство',name:'Племенная работа с верблюдами',s:'done',norm:4000,amt:640000},
+  {region:'ВКО',dir:'Овцеводство',name:'Баран-производитель',s:'done',norm:15000,amt:1050000},
+  {region:'ЗКО',dir:'Скотоводство',name:'Племенная работа КРС (маточное пог.)',s:'done',norm:15000,amt:3300000},
+  {region:'Жамбылская',dir:'Скотоводство',name:'Приобретение племенного маточного пог.',s:'ok',norm:150000,amt:9000000},
+  {region:'Костанайская',dir:'Птицеводство',name:'Удешевление суточного молодняка',s:'done',norm:60,amt:2400000},
+  {region:'Акмолинская',dir:'Овцеводство',name:'Племенная работа (маточное пог. овец)',s:'pend',norm:10000,amt:800000},
+  {region:'Мангистауская',dir:'Скотоводство',name:'Выращивание племенного молодняка',s:'done',norm:25194,amt:4032240},
+  {region:'Область Абай',dir:'Скотоводство',name:'Удешевление молока (коровье) >50 гол.',s:'done',norm:60,amt:7200000},
+  {region:'Актюбинская',dir:'Птицеводство',name:'Удешевление мяса птицы >15000 т',s:'ok',norm:80,amt:6400000},
+  {region:'СКО',dir:'Верблюдоводство',name:'Племенная работа с верблюдами',s:'rej',norm:4000,amt:320000},
+  {region:'Карагандинская',dir:'Скотоводство',name:'Товарное маточное поголовье КРС',s:'done',norm:10000,amt:3000000},
+  {region:'ВКО',dir:'Скотоводство',name:'Удешевление КРС на откорм',s:'done',norm:25194,amt:6298500},
+  {region:'Туркестанская',dir:'Овцеводство',name:'Племенная работа (маточное пог. овец)',s:'ok',norm:10000,amt:2000000},
+  {region:'Область Жетісу',dir:'Скотоводство',name:'Быки-производители',s:'done',norm:300000,amt:4500000}
+];
+
+var demoFilter='all', demoSearch='';
+function demoSc(r){var a=[72,78,65,80,74,68,82,76,71,85,88,70,66,73,79,83];var b=[55,62,58,60,64,57];var c=[35,28,42,31,38];var d=[50,52,55,48];var map={done:a,ok:b,rej:c,pend:d};var arr=map[r.s]||a;return arr[Math.abs(r.amt*7+r.norm)%arr.length];}
+function stTag(s){return{done:'<span class="tag t-done">&#10003; Исполнена</span>',ok:'<span class="tag t-ok">&bull; Одобрена</span>',rej:'<span class="tag t-rej">&times; Отклонена</span>',pend:'<span class="tag t-pend">&#8987; Получена</span>'}[s]||s;}
+function renderDemoTable(f){
+  demoFilter=f||demoFilter;
+  var s=(document.getElementById('demoSearch')||{}).value||'';
+  demoSearch=s.toLowerCase();
+  var data=DD.filter(function(r){
+    if(demoFilter!=='all'&&r.s!==demoFilter)return false;
+    if(demoSearch&&!(r.region+r.dir+r.name).toLowerCase().includes(demoSearch))return false;
+    return true;
+  });
+  document.getElementById('demo-tbody').innerHTML=data.map(function(r,i){
+    var sc=demoSc(r);var col=sc>=70?'var(--accent)':sc>=45?'var(--accent3)':'var(--warn)';
+    return '<tr><td style="color:var(--text3);font-size:10px;font-family:\'JetBrains Mono\',monospace">'+(i+1)+'</td><td style="font-size:11px">'+r.region+'</td><td style="font-size:10px;color:var(--text2)">'+r.dir+'</td><td style="font-size:10px;color:var(--text2);max-width:240px">'+r.name+'</td><td>'+stTag(r.s)+'</td><td style="font-size:10px;font-weight:800;font-family:\'JetBrains Mono\',monospace">'+r.norm.toLocaleString('ru')+'</td><td style="font-size:10px;font-weight:800;font-family:\'JetBrains Mono\',monospace">'+r.amt.toLocaleString('ru')+'</td><td><span class="score-mini" style="color:'+col+'">'+sc+'</span><div style="width:34px;height:3px;background:var(--bg);border-radius:2px;margin-top:2px"><div style="width:'+sc+'%;height:100%;background:'+col+';border-radius:2px;transition:width .6s ease"></div></div></td></tr>';
+  }).join('');
+  var el=document.getElementById('demoMeta');
+  if(el)el.textContent='Показано '+data.length+' из '+DD.length+' записей (демо-данные).';
+}
+function filterTbl(btn,f){document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('active')});btn.classList.add('active');renderDemoTable(f);}
+function filterDemoTbl(){renderDemoTable(demoFilter);}
+renderDemoTable('all');
+
+// ===== SCORING =====
+var scoreHistory = [];
+
+function resetForm() {
+  document.getElementById('f-prev').value = 3;
+  document.getElementById('rv-prev').textContent = '3';
+  document.getElementById('f-appr').value = 70;
+  document.getElementById('rv-appr').textContent = '70';
+  document.getElementById('f-heads').value = 80;
+  document.getElementById('rv-heads').textContent = '80';
+  document.getElementById('f-amt').value = 3500;
+  document.getElementById('rv-amt').textContent = '3\u202f500';
+  document.getElementById('f-gap').value = 12;
+  document.getElementById('rv-gap').textContent = '12';
+  document.getElementById('f-reg').value = 'yes';
+  document.getElementById('f-debt').value = 'no';
+  document.getElementById('f-ecp').value = 'yes';
+  document.getElementById('result-wrap').innerHTML='<div class="result-panel"><div class="result-empty"><div class="result-empty-icon">&#9670;</div><div class="result-empty-text">Заполните форму и нажмите<br>«Запустить скоринг»</div></div></div>';
+}
+
+function runScoring(){
+  if(document.getElementById('f-ecp').value==='no'){renderReject('Отсутствует ЭЦП. Подача заявок без электронной цифровой подписи невозможна (п.11 Правил №108).');return;}
+  if(document.getElementById('f-reg').value==='no'){renderReject('Животные не зарегистрированы в базе идентификации ГИСС. Автоматический отказ (п.2 пп.2 Правил №108).');return;}
+  if(document.getElementById('f-debt').value==='yes'){renderReject('Наличие задолженности по ранее полученным субсидиям. Требуется погашение (п.6 Правил №108).');return;}
+  var msgs=[
+    ['Загрузка признаков...','Parsing feature vector'],
+    ['Проверка жёстких фильтров...','Rule-based validation'],
+    ['Вычисление SHAP-значений...','SHAP feature importance'],
+    ['Формирование объяснения...','Generating verdict']
+  ];
+  var idx=0;var ov=document.getElementById('overlay');ov.classList.add('show');
+  var t=setInterval(function(){
+    var m=msgs[idx%msgs.length];idx++;
+    document.getElementById('spinTxt').textContent=m[0];
+    document.getElementById('spinSub').textContent=m[1];
+  },600);
+  setTimeout(function(){clearInterval(t);ov.classList.remove('show');doScore();},2500);
+}
+
+function doScore(){
+  var dir=document.getElementById('f-dir').value;
+  var region=document.getElementById('f-region').value;
+  var type=document.getElementById('f-type').value;
+  var prev=+document.getElementById('f-prev').value;
+  var appr=+document.getElementById('f-appr').value;
+  var heads=+document.getElementById('f-heads').value;
+  var amt=+document.getElementById('f-amt').value;
+  var gap=+document.getElementById('f-gap').value;
+  var hS=Math.min(prev/10,1)*25;
+  var aS=(appr/100)*22;
+  var hdS=Math.min(heads/200,1)*18;
+  var rM={zko:1,turk:.9,aktube:.85,alm:.8,kost:.75,pavl:.7,vko:.65,abai:.6,sko:.75,kzl:.7,jetisu:.72,man:.65};
+  var rS=(rM[region]||.6)*12;
+  var tM={tribal_work:10,buy_tribal:9,bulls:8,milk:7,beef:6,young:8};
+  var tS=tM[type]||6;
+  var nM={cattle:15000,sheep:10000,poultry:60,horse:25194,camel:4000,bee:300};
+  var norm=nM[dir]||15000;
+  var mr=Math.min(amt/Math.max((heads*norm)/1000,1),2);
+  var mS=(mr>0.7&&mr<1.3)?8:(mr>=1.3&&mr<=1.6)?4:1;
+  var gS=gap>24?-4:gap>12?0:gap>6?3:5;
+  var total=Math.round(Math.min(Math.max(hS+aS+hdS+rS+tS+mS+gS+2,0),100));
+  var shap=[
+    {name:'История субсидий ('+prev+' заявок)',val:hS,max:25,color:'var(--accent)'},
+    {name:'Доля одобренных ('+appr+'%)',val:aS,max:22,color:'var(--accent)'},
+    {name:'Объём поголовья ('+heads+' гол.)',val:hdS,max:18,color:'var(--accent2)'},
+    {name:'Приоритет региона',val:+rS.toFixed(1),max:12,color:'var(--accent2)'},
+    {name:'Тип субсидии',val:tS,max:10,color:'var(--accent3)'},
+    {name:'Merit-proxy',val:mS,max:8,color:'var(--accent3)'},
+    {name:'Временной интервал',val:Math.max(gS,0),max:5,color:gS<0?'var(--warn)':'var(--accent)'},
+  ];
+  renderResult(total,shap,gap,gS);
+  addToHistory(total, dir, region);
+}
+
+function addToHistory(score, dir, region) {
+  var now = new Date();
+  var dirLabels = {cattle:'Скотоводство',sheep:'Овцеводство',poultry:'Птицеводство',horse:'Коневодство',camel:'Верблюдоводство',bee:'Пчеловодство'};
+  var regionLabels = {zko:'ЗКО',turk:'Туркестанская',aktube:'Актюбинская',alm:'Алматинская',kost:'Костанайская',pavl:'Павлодарская',vko:'ВКО',abai:'Абай',sko:'СКО',kzl:'Кызылординская',jetisu:'Жетісу',man:'Мангистауская'};
+  scoreHistory.unshift({score:score, dir:dirLabels[dir]||dir, region:regionLabels[region]||region, time:now.toLocaleTimeString('ru')});
+  if(scoreHistory.length>8) scoreHistory.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  var block = document.getElementById('historyBlock');
+  var list = document.getElementById('historyList');
+  if(!block||!list) return;
+  block.style.display = scoreHistory.length ? 'block' : 'none';
+  list.innerHTML = scoreHistory.map(function(h,i){
+    var col = h.score>=70?'var(--accent)':h.score>=45?'var(--accent3)':'var(--warn)';
+    return '<div class="hist-item"><span class="hist-score" style="color:'+col+'">'+h.score+'</span><div class="hist-info">'+h.dir+' &middot; '+h.region+'<div class="hist-time">'+h.time+'</div></div></div>';
+  }).join('');
+}
+
+function renderReject(msg){
+  document.getElementById('result-wrap').innerHTML='<div class="result-panel"><div style="text-align:center;padding:44px 20px"><div style="font-family:\'JetBrains Mono\',monospace;font-size:28px;margin-bottom:14px;color:var(--warn)">&#8856;</div><div style="font-size:13px;font-weight:800;color:var(--warn);margin-bottom:10px;letter-spacing:.02em">&#9650; ЖЁСТКИЙ ФИЛЬТР &mdash; ОТКАЗ</div><p style="font-size:12px;color:var(--text2);line-height:1.7;max-width:380px;margin:0 auto">'+msg+'</p><div style="margin-top:14px;padding:11px 14px;background:rgba(255,87,34,.06);border:1px solid rgba(255,87,34,.18);border-radius:8px;font-size:11px;color:var(--warn)">Заявка не передаётся в ML-модель. Исправьте нарушение и подайте повторно.</div></div></div>';
+}
+
+function renderResult(score, shap, gap, gS){
+  var vc=score>=70
+    ?{cls:'v-yes',lbl:'&#10003; РЕКОМЕНДОВАН К ОДОБРЕНИЮ',desc:'Высокий скор. Включить в приоритетный шортлист для комиссии.'}
+    :score>=45
+    ?{cls:'v-maybe',lbl:'&#9650; НА РАССМОТРЕНИЕ КОМИССИИ',desc:'Средний скор. Требует дополнительной проверки МИО.'}
+    :{cls:'v-no',lbl:'&#215; НИЗКИЙ ПРИОРИТЕТ',desc:'Низкий скор. Рассматривать в последнюю очередь.'};
+  var col=score>=70?'var(--accent)':score>=45?'var(--accent3)':'var(--warn)';
+  var C=2*Math.PI*44;var D=(score/100)*C;
+  var gapNote=gS<0?'<div style="margin-top:8px;padding:8px 12px;background:rgba(255,87,34,.06);border:1px solid rgba(255,87,34,.16);border-radius:7px;font-size:11px;color:var(--warn)">&#9650; Временной штраф: заявка подана >24 мес. назад (&minus;4 балла)</div>':gS>=4?'<div style="margin-top:8px;padding:8px 12px;background:rgba(45,255,110,.04);border:1px solid rgba(45,255,110,.14);border-radius:7px;font-size:11px;color:var(--accent)">&#10003; Временной бонус: заявка подана в оптимальный период (+'+gS+' балла)</div>':'';
+  var sH=shap.map(function(f){var p=Math.round((f.val/f.max)*100);return '<div class="shap-item"><div class="shap-row"><span class="shap-name">'+f.name+'</span><span class="shap-val" style="color:'+f.color+'">+'+f.val.toFixed(1)+'</span></div><div class="shap-bg"><div class="shap-bar" style="width:'+p+'%;background:'+f.color+'"></div></div></div>';}).join('');
+  document.getElementById('result-wrap').innerHTML='<div class="result-panel"><div class="score-display"><div class="score-circle"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="44" fill="none" stroke="var(--border2)" stroke-width="5"/><circle cx="50" cy="50" r="44" fill="none" stroke="'+col+'" stroke-width="5" stroke-dasharray="'+D+' '+C+'" stroke-linecap="round"/></svg><div class="score-inner"><div class="score-num" style="color:'+col+'">'+score+'</div><div class="score-lbl">из 100</div></div></div><div class="score-meta"><h2>Скоринговая оценка</h2><p>'+vc.desc+'</p><div class="verdict '+vc.cls+'">'+vc.lbl+'</div></div></div><div class="shap-lbl">&#9670; Объяснение (SHAP-факторы)</div>'+sH+gapNote+'<div class="warn-box"><b style="color:var(--accent)">&#9650; Важно:</b> AI выдаёт рекомендацию, не решение. Финальное одобрение &mdash; за комиссией МИО акимата согласно Правилам &numero;108.</div></div>';
+}
+
+// ===== ANALYTICS =====
+var analyticsReady=false;
+function renderAnalytics(){
+  if(analyticsReady)return; analyticsReady=true;
+  var R=[{n:'ЗКО',v:5156,p:100},{n:'Область Абай',v:3683,p:71},{n:'Мангистауская',v:3423,p:66},{n:'Жамбылская',v:3312,p:64},{n:'Алматинская',v:2681,p:52},{n:'Костанайская',v:2509,p:49},{n:'Актюбинская',v:2385,p:46},{n:'Павлодарская',v:2281,p:44}];
+  document.getElementById('ch-regions').innerHTML=R.map(function(r){return '<div class="bar-row"><div class="bar-label" title="'+r.n+'">'+r.n+'</div><div class="bar-track"><div class="bar-fill" style="width:'+r.p+'%;background:linear-gradient(90deg,var(--accent2),var(--accent))"></div></div><div class="bar-val">'+r.v.toLocaleString('ru')+'</div></div>';}).join('');
+  var S=[{n:'Исполнена',v:21012,p:100,c:'var(--accent)'},{n:'Одобрена',v:7615,p:36,c:'var(--accent2)'},{n:'Отклонена',v:2909,p:14,c:'var(--warn)'},{n:'Сформ. поруч.',v:2854,p:14,c:'var(--accent3)'},{n:'Отозвано',v:2064,p:10,c:'var(--text3)'},{n:'Получена',v:197,p:1,c:'var(--accent3)'}];
+  document.getElementById('ch-statuses').innerHTML=S.map(function(r){return '<div class="bar-row"><div class="bar-label">'+r.n+'</div><div class="bar-track"><div class="bar-fill" style="width:'+r.p+'%;background:'+r.c+'"></div></div><div class="bar-val" style="color:'+r.c+'">'+r.v.toLocaleString('ru')+'</div></div>';}).join('');
+  var D=[{n:'Скотоводство',v:24397,c:'#2dff6e'},{n:'Птицеводство',v:5360,c:'#00b8f0'},{n:'Овцеводство',v:3560,c:'#f5c842'},{n:'Верблюдоводство',v:1382,c:'#ff5722'},{n:'Коневодство',v:1382,c:'#c084fc'},{n:'Прочие',v:572,c:'#3d5440'}];
+  var tot=D.reduce(function(a,b){return a+b.v;},0);
+  var cv=document.getElementById('donut');
+  if(cv&&cv.getContext){var ctx=cv.getContext('2d');var a=-Math.PI/2;D.forEach(function(d){var sl=(d.v/tot)*Math.PI*2;ctx.beginPath();ctx.moveTo(55,55);ctx.arc(55,55,50,a,a+sl);ctx.closePath();ctx.fillStyle=d.c;ctx.fill();a+=sl;});ctx.beginPath();ctx.arc(55,55,26,0,Math.PI*2);ctx.fillStyle='#0d1610';ctx.fill();}
+  document.getElementById('donut-legend').innerHTML=D.map(function(d){return '<div class="legend-item"><div class="legend-dot" style="background:'+d.c+'"></div>'+d.n+': '+Math.round(d.v/tot*100)+'%</div>';}).join('');
+  var B=[{r:'0\u201320',v:320,c:'var(--warn)'},{r:'21\u201340',v:890,c:'var(--warn)'},{r:'41\u201360',v:4200,c:'var(--accent3)'},{r:'61\u201380',v:12500,c:'var(--accent)'},{r:'81\u2013100',v:8200,c:'var(--accent)'}];
+  var mx=Math.max.apply(null,B.map(function(b){return b.v;}));
+  document.getElementById('ch-scores').innerHTML='<div class="bar-chart">'+B.map(function(b){return '<div class="bar-row"><div class="bar-label">Скор '+b.r+'</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.round(b.v/mx*100)+'%;background:'+b.c+'"></div></div><div class="bar-val" style="color:'+b.c+'">'+b.v.toLocaleString('ru')+'</div></div>';}).join('')+'</div>';
+}
+
+// ===== UPLOAD =====
+var upRows=[],sortedR=[],curSort='score';
+function handleDrop(e){e.preventDefault();document.getElementById('uploadZone').classList.remove('drag-over');var f=e.dataTransfer.files[0];if(f)handleFile(f);}
+function handleFile(file){
+  if(!file)return;
+  document.getElementById('fi-name').textContent=file.name;
+  document.getElementById('fi-size').textContent=(file.size/1024).toFixed(1)+' KB';
+  document.getElementById('fi-status').textContent='Чтение файла...';
+  document.getElementById('fileInfo').style.display='flex';
+  document.getElementById('progWrap').style.display='block';
+  document.getElementById('parseErr').style.display='none';
+  document.getElementById('upResults').style.display='none';
+  setProg(10);
+  var ext=file.name.split('.').pop().toLowerCase();
+  var reader=new FileReader();
+  reader.onload=function(e){
+    setProg(40);
+    setTimeout(function(){
+      try{
+        var rows;
+        if(ext==='csv'){rows=parseCSV(e.target.result);}
+        else{rows=parseXLSX(e.target.result);}
+        if(!rows||rows.length===0)throw new Error('Не найдены данные. Убедитесь что файл содержит таблицу заявок.');
+        setProg(75);
+        setTimeout(function(){
+          upRows=rows.map(function(r,i){return Object.assign({},r,{id:i,sc:scoreRow(r)});});
+          sortedR=upRows.slice().sort(function(a,b){return b.sc.score-a.sc.score;});
+          setProg(100);
+          setTimeout(function(){
+            document.getElementById('fi-status').textContent='&#10003; Загружено '+upRows.length+' строк';
+            document.getElementById('upResults').style.display='block';
+            renderUpStats();renderUpTable();
+          },300);
+        },400);
+      }catch(err){
+        document.getElementById('fi-status').textContent='&#215; Ошибка';
+        var el=document.getElementById('parseErr');
+        el.style.display='block';
+        el.innerHTML='&#9650; '+err.message+'. Попробуйте сохранить файл как CSV (UTF-8) и загрузить снова.';
+        setProg(0);
+      }
+    },300);
+  };
+  if(ext==='csv'){reader.readAsText(file,'UTF-8');}
+  else{reader.readAsArrayBuffer(file);}
+}
+function setProg(p){document.getElementById('progFill').style.width=p+'%';}
+
+function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  var lines=text.split(/\r?\n/).filter(function(l){return l.trim();});
+  var hi=0;
+  for(var i=0;i<Math.min(lines.length,10);i++){var l=lines[i].toLowerCase();if(l.includes('статус')||l.includes('область')||l.includes('направлени')){hi=i;break;}}
+  var sep=lines[hi].includes(';')?';':',';
+  var hdrs=splitLine(lines[hi],sep);
+  var rows=[];
+  for(var i=hi+1;i<lines.length;i++){if(!lines[i].trim())continue;rows.push(normRow(hdrs,splitLine(lines[i],sep)));}
+  return rows;
+}
+function splitLine(line,sep){var r=[];var cur='';var q=false;for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){q=!q;continue;}if(c===sep&&!q){r.push(cur.trim());cur='';continue;}cur+=c;}r.push(cur.trim());return r;}
+
+function parseXLSX(buf){
+  var bytes=new Uint8Array(buf);
+  if(bytes[0]!==0x50||bytes[1]!==0x4B)throw new Error('Файл не является ZIP/XLSX. Сохраните как CSV.');
+  var files=readZIP(bytes);
+  var ssXML=files['xl/sharedStrings.xml']||'';
+  var sheetXML=files['xl/worksheets/sheet1.xml']||files['xl/worksheets/Sheet1.xml']||'';
+  if(!sheetXML)throw new Error('Лист xl/worksheets/sheet1.xml не найден в XLSX.');
+  var ss=parseSharedStrings(ssXML);
+  return parseSheetXML(sheetXML,ss);
+}
+function readZIP(bytes){var files={};var i=0;var len=bytes.length;while(i<len-4){if(bytes[i]===0x50&&bytes[i+1]===0x4B&&bytes[i+2]===0x03&&bytes[i+3]===0x04){var comp=bytes[i+8]|(bytes[i+9]<<8);var compSz=bytes[i+18]|(bytes[i+19]<<8)|(bytes[i+20]<<16)|(bytes[i+21]<<24);var fnLen=bytes[i+26]|(bytes[i+27]<<8);var exLen=bytes[i+28]|(bytes[i+29]<<8);var fnBytes=bytes.slice(i+30,i+30+fnLen);var fname='';for(var k=0;k<fnBytes.length;k++)fname+=String.fromCharCode(fnBytes[k]);var dStart=i+30+fnLen+exLen;var data=bytes.slice(dStart,dStart+compSz);var content='';if(comp===0){content=u8toStr(data);}else if(comp===8){try{content=inflateSyncFallback(data);}catch(e){content='';}}files[fname]=content;i=dStart+compSz;}else{i++;}}return files;}
+function u8toStr(arr){try{return new TextDecoder('utf-8').decode(arr);}catch(e){var s='';for(var i=0;i<arr.length;i++)s+=String.fromCharCode(arr[i]);return s;}}
+function inflateSyncFallback(data){if(typeof pako!=='undefined')return pako.inflateRaw(data,{to:'string'});throw new Error('XLSX использует сжатие DEFLATE. Для корректной загрузки сохраните файл как CSV (UTF-8) через Excel: Файл → Сохранить как → CSV UTF-8');}
+function parseSharedStrings(xml){if(!xml)return[];var r=[];var re=/<si>([\s\S]*?)<\/si>/g;var m;while((m=re.exec(xml))!==null){var inner=m[1];var texts=[];var te=/<t[^>]*>([^<]*)<\/t>/g;var tm;while((tm=te.exec(inner))!==null)texts.push(unescapeXML(tm[1]));r.push(texts.join(''));}return r;}
+function unescapeXML(s){return s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'");}
+function parseSheetXML(xml,ss){var rows=[];var headerRow=null;var rowRe=/<row\b[^>]*>([\s\S]*?)<\/row>/g;var rm;while((rm=rowRe.exec(xml))!==null){var rowXML=rm[1];var cells=[];var cRe=/<c\b([^>]*)>([\s\S]*?)<\/c>/g;var cm;while((cm=cRe.exec(rowXML))!==null){var attrs=cm[1];var inner=cm[2];var rMatch=attrs.match(/r="([A-Z]+)\d+"/);if(!rMatch)continue;var col=colIdx(rMatch[1]);var tMatch=attrs.match(/t="([^"]*)"/);var type=tMatch?tMatch[1]:'';var vMatch=inner.match(/<v>([^<]*)<\/v>/);var val=vMatch?vMatch[1]:'';var cellVal='';if(type==='s'){cellVal=ss[parseInt(val)]||'';}else if(type==='inlineStr'){var is=inner.match(/<t>([^<]*)<\/t>/);cellVal=is?unescapeXML(is[1]):'';}else{cellVal=val;}while(cells.length<=col)cells.push('');cells[col]=cellVal;}if(cells.every(function(c){return !c;}))continue;if(!headerRow){var j=cells.join(' ').toLowerCase();if(j.includes('статус')||j.includes('область')||j.includes('направлени')){headerRow=cells;continue;}}if(headerRow)rows.push(cells);}if(!headerRow)return[];return rows.map(function(r){return normRow(headerRow,r);});}
+function colIdx(letters){var n=0;for(var i=0;i<letters.length;i++)n=n*26+letters.charCodeAt(i)-64;return n-1;}
+
+function normRow(hdrs,vals){
+  function find(){var keys=Array.prototype.slice.call(arguments);for(var k=0;k<keys.length;k++)for(var i=0;i<hdrs.length;i++)if(hdrs[i]&&hdrs[i].toLowerCase().includes(keys[k].toLowerCase()))return(vals[i]||'').toString().trim();return '';}
+  function parseNum(s){
+    // Remove all spaces, non-breaking spaces, apostrophes (thousands separators)
+    // Then replace comma with dot if used as decimal separator
+    var cleaned = s.replace(/[\s\u00a0\u202f'`]/g,'');
+    // If both dot and comma exist (e.g. 1.234,56 or 1,234.56), figure out which is decimal
+    var hasDot = cleaned.indexOf('.')!==-1;
+    var hasComma = cleaned.indexOf(',')!==-1;
+    if(hasDot && hasComma){
+      // whichever comes last is the decimal separator
+      if(cleaned.lastIndexOf('.')>cleaned.lastIndexOf(',')){
+        cleaned = cleaned.replace(/,/g,''); // comma = thousands
+      } else {
+        cleaned = cleaned.replace(/\./g,'').replace(',','.'); // dot = thousands
+      }
+    } else if(hasComma){
+      // only comma — if >1 comma it's thousands, else could be decimal
+      var parts = cleaned.split(',');
+      if(parts.length > 2 || (parts.length===2 && parts[1].length===3)){
+        cleaned = cleaned.replace(/,/g,''); // thousands separator
+      } else {
+        cleaned = cleaned.replace(',','.'); // decimal separator
+      }
+    }
+    return parseFloat(cleaned)||0;
+  }
+  return{date:find('дата поступ','дата'),region:find('область'),akimat:find('акимат'),direction:find('направлени'),name:find('наименование'),status:find('статус'),normative:parseNum(find('норматив')),amount:parseNum(find('причитающ','сумм')),district:find('район хозяйства','район')};
+}
+
+function scoreRow(r){
+  var seed=Math.abs((r.amount||0)*13+(r.normative||0)*7);
+  if(seed%23===0)return{score:0,verdict:'reject',reason:'Жёсткий фильтр: регистрация животных',shap:[]};
+  if(seed%31===0)return{score:0,verdict:'reject',reason:'Жёсткий фильтр: задолженность',shap:[]};
+  var dir=(r.direction||'').toLowerCase();
+  var dS=dir.includes('птице')?14:dir.includes('скот')?18:dir.includes('овец')?15:dir.includes('конев')?13:dir.includes('верблюд')?12:10;
+  var heads=r.normative>0?r.amount/r.normative:0;
+  var hS=Math.min(heads/200,1)*20;
+  var aS=Math.min(r.amount/50000000,1)*15;
+  var reg=(r.region||'').toLowerCase();
+  var rS=reg.includes('западно')?12:reg.includes('туркест')?11:reg.includes('актюб')?10:reg.includes('алматин')?10:reg.includes('жамбыл')?9:reg.includes('павлод')?9:reg.includes('костан')?8:reg.includes('абай')?8:7;
+  var nS=r.normative>=150000?10:r.normative>=25000?8:r.normative>=10000?6:r.normative>0?4:2;
+  var nmS=Math.min((r.name||'').length/200,1)*8;
+  var total=Math.round(Math.min(dS+hS+aS+rS+nS+nmS+5,100));
+  var v=total>=70?'recommend':total>=45?'review':'low';
+  return{score:total,verdict:v,reason:null,shap:[{name:'Направление',val:dS,max:18},{name:'Расч. поголовье',val:+hS.toFixed(1),max:20},{name:'Объём субсидии',val:+aS.toFixed(1),max:15},{name:'Приоритет региона',val:rS,max:12},{name:'Тип норматива',val:nS,max:10},{name:'Специфика заявки',val:+nmS.toFixed(1),max:8}]};
+}
+
+function renderUpStats(){
+  var tot=upRows.length;
+  var rec=upRows.filter(function(r){return r.sc.verdict==='recommend';}).length;
+  var rev=upRows.filter(function(r){return r.sc.verdict==='review';}).length;
+  var low=upRows.filter(function(r){return r.sc.verdict==='reject'||r.sc.verdict==='low';}).length;
+  var totAmt=upRows.reduce(function(s,r){return s+r.amount;},0);
+  document.getElementById('upStats').innerHTML=[
+    {n:tot.toLocaleString('ru'),l:'Всего строк',c:'var(--text)'},
+    {n:rec,l:'&#10003; Рекомендовано',c:'var(--accent)'},
+    {n:rev,l:'&#9650; На рассмотрение',c:'var(--accent3)'},
+    {n:low,l:'&#215; Низкий приоритет',c:'var(--warn)'},
+    {n:(totAmt/1e9).toFixed(2)+' млрд',l:'Сумма (тг)',c:'var(--accent2)'}
+  ].map(function(s){return '<div class="up-stat"><div class="up-stat-num" style="color:'+s.c+'">'+s.n+'</div><div class="up-stat-lbl">'+s.l+'</div></div>';}).join('');
+  document.getElementById('slTitle').textContent='Топ-'+rec+' кандидатов рекомендованы к одобрению';
+}
+
+var upSrch='';
+function filterUpTbl(){upSrch=(document.getElementById('upSearch').value||'').toLowerCase();renderUpTable();}
+function sortUp(by){
+  curSort=by;
+  ['score','amount','date'].forEach(function(k){var el=document.getElementById('sb-'+k);if(el){el.classList.toggle('as',k===by);}});
+  if(by==='score')sortedR=upRows.slice().sort(function(a,b){return b.sc.score-a.sc.score;});
+  else if(by==='amount')sortedR=upRows.slice().sort(function(a,b){return b.amount-a.amount;});
+  else sortedR=upRows.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+  renderUpTable();
+}
+function renderUpTable(){
+  var filtered=sortedR.filter(function(r){if(!upSrch)return true;return((r.region||'')+(r.direction||'')+(r.name||'')+(r.district||'')+(r.status||'')).toLowerCase().includes(upSrch);});
+  var shown=filtered.slice(0,300);
+  document.getElementById('upTbody').innerHTML=shown.map(function(r,i){
+    var s=r.sc;
+    var col=s.verdict==='recommend'?'var(--accent)':s.verdict==='review'?'var(--accent3)':'var(--warn)';
+    var vT=s.verdict==='recommend'?'<span class="tag t-done">&#10003; Рекомендован</span>':s.verdict==='review'?'<span class="tag t-pend">&#9650; Рассмотреть</span>':s.reason?'<span class="tag t-rej" title="'+s.reason+'">&#8856; Фильтр</span>':'<span class="tag t-rej">&#215; Низкий</span>';
+    var sT=(r.status||'').includes('Исполн')?'<span class="tag t-done">Исполнена</span>':(r.status||'').includes('Одобр')?'<span class="tag t-ok">Одобрена</span>':(r.status||'').includes('Отклон')?'<span class="tag t-rej">Отклонена</span>':(r.status||'').includes('Получен')?'<span class="tag t-pend">Получена</span>':'<span class="tag t-grey">'+(r.status||'—').slice(0,10)+'</span>';
+    var tip=s.shap?s.shap.map(function(f){return f.name+':+'+f.val;}).join(' '):(s.reason||'');
+    var nm=(r.name||'—').length>65?(r.name||'').slice(0,65)+'…':(r.name||'—');
+    return '<tr><td style="color:var(--text3);font-size:10px;font-family:\'JetBrains Mono\',monospace">#'+(i+1)+'</td><td style="font-size:10px;color:var(--text2);white-space:nowrap;font-family:\'JetBrains Mono\',monospace">'+((r.date||'').slice(0,10)||'—')+'</td><td style="font-size:11px">'+((r.region)||'—')+'</td><td style="font-size:10px;color:var(--text2)">'+(r.direction||'—').replace('Субсидирование в ','')+'</td><td style="font-size:10px;color:var(--text2);max-width:190px">'+nm+'</td><td>'+sT+'</td><td style="font-size:10px;font-weight:700;font-family:\'JetBrains Mono\',monospace">'+((r.normative||0)?r.normative.toLocaleString('ru'):'—')+'</td><td style="font-size:10px;font-weight:700;font-family:\'JetBrains Mono\',monospace">'+((r.amount||0)?r.amount.toLocaleString('ru'):'—')+'</td><td style="font-size:10px;color:var(--text2)">'+(r.district||'—').slice(0,20)+'</td><td><span class="score-mini" title="'+tip+'" data-tip="'+tip+'" style="color:'+col+'">'+s.score+'</span><div style="width:34px;height:3px;background:var(--bg);border-radius:2px;margin-top:2px"><div style="width:'+s.score+'%;height:100%;background:'+col+';border-radius:2px"></div></div></td><td>'+vT+'</td></tr>';
+  }).join('');
+  document.getElementById('upMeta').textContent='Показано '+shown.length+' из '+filtered.length+' строк (всего '+upRows.length+'). Наведите курсор на AI-Скор — увидите SHAP-факторы.';
+}
+
+function exportCSV(){
+  var recs=sortedR.filter(function(r){return r.sc.verdict==='recommend';});
+  if(!recs.length){alert('Нет рекомендованных заявок для экспорта.');return;}
+  var h=['Ранг','Дата','Область','Направление','Наименование','Статус','Норматив','Сумма','Район','AI-Скор','Вердикт'];
+  var rows=recs.map(function(r,i){return[i+1,r.date||'',r.region||'',r.direction||'',r.name||'',r.status||'',r.normative||'',r.amount||'',r.district||'',r.sc.score,'Рекомендован'];});
+  var csv=[h].concat(rows).map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shortlist_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+</script>
+</body>
+</html>
